@@ -34,8 +34,8 @@
 #include <stdbool.h>
 
 #define ME_RANGE "range error"
-#define ML_WARNING(x, y) printf("%s %s\n", x, y)
-#define MATHLIB_ERROR(x, y) printf(x, y);
+#define ML_WARNING(x, y) fprintf(stderr, "%s %s\n", x, y)
+#define MATHLIB_ERROR(x, y) fprintf(stderr, x, y);
 #define MATHLIB_WARNING4(a, b, c, d, e) fprintf(stderr, a, b, c, d, e)
 #define MATHLIB_WARNING2(a, b, c) fprintf(stderr, a, b, c)
 
@@ -138,7 +138,7 @@ double bessel_k(double x, double alpha, bool expon_scaled) {
 
     if (x < 0) {
         ML_WARNING(ME_RANGE, "bessel_k");
-        return ME_NAN_RANGE_ERROR;
+        return NAN; // ME_NAN_RANGE_ERROR;
     }
 
     ize = (int) expo;
@@ -151,7 +151,7 @@ double bessel_k(double x, double alpha, bool expon_scaled) {
     bk = (double * ) calloc(nb, sizeof(double));
     if (!bk) {
         MATHLIB_ERROR("%s", "bessel_k allocation error");
-        return ME_NAN_MEM_ALLOCATION_ERROR;
+        return NAN; // ME_NAN_MEM_ALLOCATION_ERROR;
     }
 
     K_bessel( & x, & alpha, & nb, & ize, bk, & ncalc);
@@ -179,7 +179,7 @@ double bessel_k_ex(double x, double alpha, double expo, double * bk) {
 
     if (x < 0) {
         ML_WARNING(ME_RANGE, "bessel_k");
-        return ME_NAN_RANGE_ERROR;
+        return NAN; //ME_NAN_RANGE_ERROR;
     }
     ize = (int) expo;
     if (alpha < 0)

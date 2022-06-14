@@ -141,22 +141,22 @@ bool parse2Arguments(int nrArgs, char **cli, double *xStart, double *xStop,  dou
 
     strncpy(xdeltaStringData, xArguments+pmatch[3].rm_so, pmatch[3].rm_eo-pmatch[3].rm_so);
        
-    printf("xArguments=[%s]\n", xArguments);
-    printf("[%d],[%d]\n", pmatch[0].rm_so, pmatch[0].rm_eo);
-    printf("[%d],[%d]\n", pmatch[1].rm_so, pmatch[1].rm_eo);
-    printf("[%d],[%d]\n", pmatch[2].rm_so, pmatch[2].rm_eo);
-    printf("[%d],[%d]\n", pmatch[3].rm_so, pmatch[3].rm_eo);
+   // printf("xArguments=[%s]\n", xArguments);
+   // printf("[%d],[%d]\n", pmatch[0].rm_so, pmatch[0].rm_eo);
+   // printf("[%d],[%d]\n", pmatch[1].rm_so, pmatch[1].rm_eo);
+   // printf("[%d],[%d]\n", pmatch[2].rm_so, pmatch[2].rm_eo);
+   // printf("[%d],[%d]\n", pmatch[3].rm_so, pmatch[3].rm_eo);
 
-    printf("xstartStringData=[%s]\n", xstartStringData);
-    printf("xstopStringData=[%s]\n", xstopStringData);
-    printf("xdeltaStringData=[%s]\n", xdeltaStringData);
+   // printf("xstartStringData=[%s]\n", xstartStringData);
+   // printf("xstopStringData=[%s]\n", xstopStringData);
+   // printf("xdeltaStringData=[%s]\n", xdeltaStringData);
   
 
     *xStart = strtod(xstartStringData, &xstartStringEndPointer);
     *xStop = strtod(xstopStringData, &xstopStringEndPointer);
     *xDelta = strtod(xdeltaStringData, &xdeltaStringEndPointer);
 
-    printf("after strtod=%.23lf,%.23lf,%.23lf\n", *xStart, *xStop, *xDelta);
+   // printf("after strtod=%.23lf,%.23lf,%.23lf\n", *xStart, *xStop, *xDelta);
 
     
     if (*xStop < *xStart){
@@ -178,7 +178,7 @@ bool parse2Arguments(int nrArgs, char **cli, double *xStart, double *xStop,  dou
     char * alphaArguments = getOptionArgument(cli[1]);
     //printf("alpha=[%s]\n",alphaArguments);
     *alpha = strtod(alphaArguments, &alphaStringEndPointer);
-    printf("alpha=[%.23lf]\n", *alpha);
+   // printf("alpha=[%.23lf]\n", *alpha);
     return true;
 }
 

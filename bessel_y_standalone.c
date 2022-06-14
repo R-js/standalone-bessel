@@ -36,8 +36,8 @@
 #define min0(x, y) (((x) <= (y)) ? (x) : (y))
 
 #define ME_RANGE "range error"
-#define ML_WARNING(x, y) printf("%s %s\n", x, y)
-#define MATHLIB_ERROR(x, y) printf(x, y);
+#define ML_WARNING(x, y) fprintf(stderr, "%s %s\n", x, y)
+#define MATHLIB_ERROR(x, y) fprintf(stderr, x, y);
 #define MATHLIB_WARNING4(a, b, c, d, e) fprintf(stderr, a, b, c, d, e)
 #define MATHLIB_WARNING2(a, b, c) fprintf(stderr, a, b, c)
 #define MATHLIB_WARNING(a, b) fprintf(stderr, a, b)
@@ -70,7 +70,7 @@ double bessel_y(double x, double alpha)
 #endif
     if (x < 0) {
 	ML_WARNING(ME_RANGE, "bessel_y");
-	return ME_RANGE_NAN;
+	return NAN; //ME_RANGE_NAN;
     }
     na = floor(alpha);
     if (alpha < 0) {
@@ -82,7 +82,7 @@ double bessel_y(double x, double alpha)
     else if (alpha > 1e7) {
 	MATHLIB_WARNING("besselY(x, nu): nu=%g too large for bessel_y() algorithm",
 			alpha);
-	return ME_RANGE_NAN;
+	return NAN; //ME_RANGE_NAN;
     }
     nb = 1+ (int)na;/* nb-1 <= alpha < nb */
     alpha -= (double)(nb-1);
