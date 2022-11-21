@@ -6,7 +6,8 @@
 #include <string.h>
 #include <stdint.h>
 #include <ctype.h>
-#include <regex.h> 
+#include <regex.h>
+#include <float.h>
 
 
 double bessel_i(double x, double alpha, bool expon_scaled);
@@ -30,7 +31,7 @@ bool partiallyComp(char *truthy, char const * dict){
            ){
             return false;
         }
-    }   
+    }
     return true;
 }
 
@@ -82,22 +83,31 @@ char *getOptionArgument(char *str){
     //printf("scaleArgument = [%d]\n", *exponentScale);
     return true;
  }
-
-bool parse2Arguments(int nrArgs, char **cli, double *xStart, double *xStop,  double *xDelta, double *alpha){
+ 
+// xStart xStop Count are optionArguments to option -x
+// alpha is argument to option 
+bool parse2Arguments(int nrArgs, char **cli, double *xStart, double *xStop, unsigned long int *count, double *alpha){
     char xstartStringData[150];
     char * xstartStringEndPointer;
     char xstopStringData[150];
     char * xstopStringEndPointer;
-    char xdeltaStringData[150];
-    char * xdeltaStringEndPointer;
+
+    // count, number of steps
+    char xCountStringData[150];
+    char *xCountStringEndPointer;
+
+    // alpha parameter
     char alphaStringData[150];
     char * alphaStringEndPointer;
 
+    // nrArgs
     if (nrArgs < 2){
         fprintf(stderr, "number of arguments for bessel is incorrect, nrArgs=[%d]\n", nrArgs + 1);
         return false;
     }
-    if ( getOption(cli[0]) != 'x'){
+
+    //
+    if ( getOption(cli[0]) != 'x') {
         fprintf(stderr, "-x argument option not found\n");
         return false;
     }
@@ -109,6 +119,7 @@ bool parse2Arguments(int nrArgs, char **cli, double *xStart, double *xStop,  dou
     regex_t regex;
     
     int reti = regcomp(&regex, "^([^,]+),([^,]+)?,([^,]+)?$", REG_ICASE|REG_EXTENDED);
+
     if (reti) {
         fprintf(stderr, "Could not compile regex\n");
         return -10;
@@ -118,6 +129,7 @@ bool parse2Arguments(int nrArgs, char **cli, double *xStart, double *xStop,  dou
 
     int status = regexec(&regex, xArguments, 4, pmatch, 0);
     regfree(&regex);
+
     if (status) {
         char errorBuffer[150];
         regerror(status, &regex, errorBuffer, 150); 
@@ -126,7 +138,7 @@ bool parse2Arguments(int nrArgs, char **cli, double *xStart, double *xStop,  dou
     }
     int lenXStart = pmatch[1].rm_eo-pmatch[1].rm_so;
     int lenXStop =  pmatch[2].rm_eo-pmatch[2].rm_so;
-    int lenXDelta =  pmatch[3].rm_eo-pmatch[3].rm_so;
+    int lenXCount =  pmatch[3].rm_eo-pmatch[3].rm_so;
 
 
 
@@ -136,36 +148,27 @@ bool parse2Arguments(int nrArgs, char **cli, double *xStart, double *xStop,  dou
     memcpy(xstopStringData, xArguments + pmatch[2].rm_so, lenXStop);
     xstopStringData[lenXStop] = 0;
     
-    memcpy(xdeltaStringData, xArguments + pmatch[3].rm_so, lenXDelta);
-    xdeltaStringData[lenXDelta] = 0;
+    memcpy(xCountStringData, xArguments + pmatch[3].rm_so, lenXCount);
+    xCountStringData[lenXCount] = 0;
 
-    strncpy(xdeltaStringData, xArguments+pmatch[3].rm_so, pmatch[3].rm_eo-pmatch[3].rm_so);
+    //strncpy(xdeltaStringData, xArguments+pmatch[3].rm_so, pmatch[3].rm_eo-pmatch[3].rm_so);
        
-   // printf("xArguments=[%s]\n", xArguments);
-   // printf("[%d],[%d]\n", pmatch[0].rm_so, pmatch[0].rm_eo);
-   // printf("[%d],[%d]\n", pmatch[1].rm_so, pmatch[1].rm_eo);
-   // printf("[%d],[%d]\n", pmatch[2].rm_so, pmatch[2].rm_eo);
-   // printf("[%d],[%d]\n", pmatch[3].rm_so, pmatch[3].rm_eo);
-
-   // printf("xstartStringData=[%s]\n", xstartStringData);
-   // printf("xstopStringData=[%s]\n", xstopStringData);
-   // printf("xdeltaStringData=[%s]\n", xdeltaStringData);
-  
-
     *xStart = strtod(xstartStringData, &xstartStringEndPointer);
     *xStop = strtod(xstopStringData, &xstopStringEndPointer);
-    *xDelta = strtod(xdeltaStringData, &xdeltaStringEndPointer);
+    *count = strtoul(xCountStringData, 0, 10);
 
-   // printf("after strtod=%.23lf,%.23lf,%.23lf\n", *xStart, *xStop, *xDelta);
+    if (*count == 0L){
+        *count = 1;
+    }
 
-    
     if (*xStop < *xStart){
         fprintf(stderr, "Bessel cannot have an [xStop]=[%.23lf] smaller then [xStart]=[%.23lf]\n", *xStop, *xStart);
         return false;
     }
 
-    if (*xDelta > (*xStop - *xStart)){
-        fprintf(stderr, "Bessel cannot have an [xDelta]=[%.23lf] bigger then [xStop-xStart]=([%.23lf]-[%.23lf])=[%.23lf]\n", *xDelta, *xStop, *xStart, (*xStop-*xStart));
+    // check if count will create an underflow
+    if ( (*xStop - *xStart) < DBL_EPSILON*(*count) && (*count) > 1) {
+        fprintf(stderr, "Bessel cannot have an [count]=[%lu] slicing domain [xStart, xStop]/count, in parts smaller then EPSILON (%.23lf)", *count, DBL_EPSILON);
         return false;
     }
     // parse -a option argument
@@ -178,10 +181,31 @@ bool parse2Arguments(int nrArgs, char **cli, double *xStart, double *xStop,  dou
     char * alphaArguments = getOptionArgument(cli[1]);
     //printf("alpha=[%s]\n",alphaArguments);
     *alpha = strtod(alphaArguments, &alphaStringEndPointer);
-   // printf("alpha=[%.23lf]\n", *alpha);
+    // printf("alpha=[%.23lf]\n", *alpha);
     return true;
 }
 
+double calcBessel(char type, double x, double alpha, bool expScale){
+
+    fn_2_arg fn_2 = NULL; 
+
+    fn_3_arg fn_3 = NULL;
+
+    switch(type){
+        case 'i':
+        case 'k':
+            fn_3 = type == 'i' ? bessel_i : bessel_k;
+            return fn_3(x, alpha, expScale);
+        case 'y':
+        case 'j':
+            fn_2 = type == 'y' ? bessel_y : bessel_j;
+            return fn_2(x, alpha);
+    }
+}
+
+void printBesselData(int idx, double answ, double x, double alpha, bool exponentScale){
+     printf("%d,%.22e,%.22e,%c,%.22e\n", idx, x, alpha, exponentScale ? 't':'f', answ);
+}
 
 int main(int argc, char **argv) {
 
@@ -202,10 +226,10 @@ int main(int argc, char **argv) {
     */
 
     // argv[1] must be 
-    // 1 "-j" besselJ, | -j -x=0,100,0.1 -a=0.23           |3+1
-    // 2 "-i" besselI  | -i -x=0,100,0.1 -a=0.23 -s=false  |4+1
-    // 3 "-y" besselY  | -y -x=0,100,0.1 -a=0.23           |3+1
-    // 4 "-k" besselK  | -k -x=0,100,0.1 -a=0.23 -s=true   |4+1
+    // 1 "-j" besselJ, | -j -x=0,100,5 -a=0.23           |3+1
+    // 2 "-i" besselI  | -i -x=0,100,5 -a=0.23 -s=false  |4+1
+    // 3 "-y" besselY  | -y -x=0,100,5 -a=0.23           |3+1
+    // 4 "-k" besselK  | -k -x=0,100,5 -a=0.23 -s=true   |4+1
 
     char besselType = getOption(argv[1]);
     if (!besselType){
@@ -215,9 +239,9 @@ int main(int argc, char **argv) {
 
     double xstart;
     double xstop;
-    double xdelta;
+    unsigned long int count;
     double alpha;
-    bool  exponentScale;
+    bool  exponentScale = 0;
 
     switch(besselType){
         case 'i':
@@ -226,42 +250,55 @@ int main(int argc, char **argv) {
             if (!parseScaleArgument(argc - 4, argv + 4, &exponentScale)){
               return -6;
             };
-            fn_3 = besselType == 'i' ? bessel_i : bessel_k;
-            fn_2 = NULL;
         case 'y':
         case 'j':
            // -1 (for argv[0]), -1 for B. option, (0 for exponentScale optional, so does not count)
-           if (!parse2Arguments(argc - 2, argv + 2, &xstart, &xstop, &xdelta, &alpha)){
+           printf("option y or j selected\n");
+           if (!parse2Arguments(argc - 2, argv + 2, &xstart, &xstop, &count, &alpha)){
               return -4;
-           }
-           if (fn_3 == NULL){
-              fn_2 = besselType == 'y' ? bessel_y : bessel_j;
            }
            break;
         default:
             fprintf(stderr, "first option should be the one of -i,-j,-y,-k\n");
             return -3;
     }
-
+    // printf("ExponentScale=%d, xstart=%f\n", exponentScale, xstart);
     // now we have everything we need
     double answ;
-    int i = 1;
-    for (double x = xstart; x <= xstop ; x+=xdelta, i++){
-        switch(besselType){
-            case 'i':
-            case 'k':
-                answ = fn_3(x, alpha, exponentScale);
-                printf("%d,%.22e,%.22e,%c,%.22e\n", i, x, alpha, exponentScale ? 't':'f', answ);
-                break;
-            case 'y':
-            case 'j':
-                answ = fn_2(x, alpha);
-                printf("%d,%.22e,%.22e,%.22e\n", i, x, alpha, answ);
-        }
-        if (x == xstop){
-            break;
-        }
-    }
 
+    // always print first point
+    answ = calcBessel(besselType, xstart, alpha, exponentScale);
+    printBesselData(1, answ, xstart, alpha, exponentScale);
+    
+    // 1. if xStart < xStop within EPSILON then xStart = xStop its only one pointer
+        //
+    if ( abs(xstop - xstart) <= DBL_EPSILON ){
+        return 0;
+    }
+    // calculate xstart and xstop is different, if count == 1 then only do xstart and xstop
+    if (count == 1){
+        answ = calcBessel(besselType, xstop, alpha, exponentScale);
+        printBesselData(2, answ, xstart, alpha, exponentScale);
+        return 0;
+    }
+    //
+    // if count = 1
+    //  |---------------|
+    // start           stop 
+    
+    // if count = 2 (simular if count > 2)
+    //  |-------|-------|
+    // start           stop 
+    //
+    const double const partitionSize = ( xstop - xstart ) / count;
+    unsigned long int i = 1;
+    while (i < count) {
+        double x = xstart + partitionSize * i;
+        answ = calcBessel(besselType, x, alpha, exponentScale);
+        printBesselData(i+1, answ, x, alpha, exponentScale);
+        i++;
+    }
+    answ = calcBessel(besselType, xstop, alpha, exponentScale);
+    printBesselData(count + 1, answ, xstop, alpha, exponentScale);
     return 0;
 }
