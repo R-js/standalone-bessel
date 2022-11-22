@@ -31,7 +31,7 @@
 
 #include <float.h>
 
-#define MATHLIB_STANDALONE
+
 #define IEEE_754
 
 #define min0(x, y)(((x) <= (y)) ? (x) : (y))
@@ -67,10 +67,7 @@ static void J_bessel(double * x, double * alpha, int * nb,
 double bessel_j(double x, double alpha) {
     int nb, ncalc;
     double na, * bj;
-    #ifndef MATHLIB_STANDALONE
-    const void * vmax;
-    #endif
-
+   
     /* NaNs propagated correctly */
     if (isnan(x) || isnan(alpha)) {
         return x + alpha;
@@ -92,13 +89,8 @@ double bessel_j(double x, double alpha) {
     }
     nb = 1 + (int) na; /* nb-1 <= alpha < nb */
     alpha -= (double)(nb - 1); // ==> alpha' in [0, 1)
-    #ifdef MATHLIB_STANDALONE
     bj = (double * ) calloc(nb, sizeof(double));
     if (!bj) MATHLIB_ERROR("%s", "bessel_j allocation error");
-    #else
-    vmax = vmaxget();
-    bj = (double * ) R_alloc((size_t) nb, sizeof(double));
-    #endif
     J_bessel( & x, & alpha, & nb, bj, & ncalc);
     if (ncalc != nb) {
         /* error input */
@@ -110,11 +102,8 @@ double bessel_j(double x, double alpha) {
                 x, alpha + (double) nb - 1);
     }
     x = bj[nb - 1];
-    #ifdef MATHLIB_STANDALONE
+   
     free(bj);
-    #else
-    vmaxset(vmax);
-    #endif
     return x;
 }
 
