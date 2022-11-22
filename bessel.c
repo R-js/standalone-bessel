@@ -118,45 +118,75 @@ bool parse2Arguments(int nrArgs, char **cli, double *xStart, double *xStop, unsi
     
     regex_t regex;
     
-    int reti = regcomp(&regex, "^([^,]+),([^,]+)?,([^,]+)?$", REG_ICASE|REG_EXTENDED);
+    int reti = regcomp(&regex, "^([^,]+)(,([^,]+))?(,([^,]+))?$", REG_ICASE|REG_EXTENDED);
 
     if (reti) {
         fprintf(stderr, "Could not compile regex\n");
         return -10;
     }
 
-    regmatch_t pmatch[4];    
+    regmatch_t pmatch[6];    
 
-    int status = regexec(&regex, xArguments, 4, pmatch, 0);
+    int status = regexec(&regex, xArguments, 6, pmatch, 0);
     regfree(&regex);
 
+   /*printf("match in pmatch is [0].rm_eo=%d, [0].rm_so=%d\n", pmatch[0].rm_eo, pmatch[0].rm_so);
+    printf("match in pmatch is [1].rm_eo=%d, [1].rm_so=%i\n", pmatch[1].rm_eo, pmatch[1].rm_so);
+    printf("match in pmatch is [2].rm_eo=%d, [2].rm_so=%d\n", pmatch[2].rm_eo, pmatch[2].rm_so);
+    printf("match in pmatch is [3].rm_eo=%d, [3].rm_so=%d\n", pmatch[3].rm_eo, pmatch[3].rm_so);
+    printf("match in pmatch is [4].rm_eo=%d, [4].rm_so=%d\n", pmatch[4].rm_eo, pmatch[4].rm_so);
+    printf("match in pmatch is [5].rm_eo=%d, [5].rm_so=%d\n", pmatch[5].rm_eo, pmatch[5].rm_so);
+    */
+    /*
+    ./bessel -j -x=4578,4,5999 -a=0
+      gives this match
+        match in pmatch is [0].rm_eo=11, [0].rm_so=0
+        match in pmatch is [1].rm_eo=4, [1].rm_so=0
+        match in pmatch is [2].rm_eo=6, [2].rm_so=4
+        match in pmatch is [3].rm_eo=6, [3].rm_so=5
+        match in pmatch is [4].rm_eo=11, [4].rm_so=6
+        match in pmatch is [5].rm_eo=11, [5].rm_so=7
+    */
+    
     if (status) {
         char errorBuffer[150];
         regerror(status, &regex, errorBuffer, 150); 
-        fprintf(stderr, "exec status = [%d], [%s]\n", status, errorBuffer);
+        fprintf(stderr, "[debug] regexec status = [%d], [%s]\n", status, errorBuffer);
+        fprintf(stderr, "Wrong input for -x option, should be -x=start,stop,nr_of_partitions\n");
         return -11;
     }
+    
+    // -x should always have at least one argument
     int lenXStart = pmatch[1].rm_eo-pmatch[1].rm_so;
-    int lenXStop =  pmatch[2].rm_eo-pmatch[2].rm_so;
-    int lenXCount =  pmatch[3].rm_eo-pmatch[3].rm_so;
-
-
-
     memcpy(xstartStringData, xArguments, lenXStart);//+pmatch[1].rm_so, pmatch[1].rm_eo-pmatch[1].rm_so);
     xstartStringData[lenXStart] = 0;
-    
-    memcpy(xstopStringData, xArguments + pmatch[2].rm_so, lenXStop);
-    xstopStringData[lenXStop] = 0;
-    
-    memcpy(xCountStringData, xArguments + pmatch[3].rm_so, lenXCount);
-    xCountStringData[lenXCount] = 0;
-
-    //strncpy(xdeltaStringData, xArguments+pmatch[3].rm_so, pmatch[3].rm_eo-pmatch[3].rm_so);
-       
     *xStart = strtod(xstartStringData, &xstartStringEndPointer);
-    *xStop = strtod(xstopStringData, &xstopStringEndPointer);
-    *count = strtoul(xCountStringData, 0, 10);
+    //printf("xstart=[%.23lf]\n", *xStart);
 
+   
+    *xStop = *xStart;
+    // -x optional has a xstop
+    if (pmatch[3].rm_eo > 0) {
+        int lenXStop =  pmatch[3].rm_eo-pmatch[3].rm_so;
+        memcpy(xstopStringData, xArguments + pmatch[3].rm_so, lenXStop);
+        xstopStringData[lenXStop] = 0;
+        *xStop = strtod(xstopStringData, &xstopStringEndPointer);
+        //printf("xstop=[%.23lf]\n", *xStop);
+    }
+
+
+    
+    *count = 0;
+    // -x optional has a count (number of devisions between xstart and xstop)
+    if ( pmatch[5].rm_eo > 0){
+        int lenXCount = pmatch[5].rm_eo-pmatch[5].rm_so;
+        memcpy(xCountStringData, xArguments + pmatch[5].rm_so, lenXCount);
+        xCountStringData[lenXCount] = 0;
+        //printf("counts=[%s]\n", xCountStringData);
+        *count = strtoul(xCountStringData, 0, 10);
+        // printf("count=[%u]\n", *count);
+    }
+  
     if (*count == 0L){
         *count = 1;
     }
@@ -253,7 +283,7 @@ int main(int argc, char **argv) {
         case 'y':
         case 'j':
            // -1 (for argv[0]), -1 for B. option, (0 for exponentScale optional, so does not count)
-           printf("option y or j selected\n");
+           // printf("option y or j selected\n");
            if (!parse2Arguments(argc - 2, argv + 2, &xstart, &xstop, &count, &alpha)){
               return -4;
            }
@@ -278,7 +308,7 @@ int main(int argc, char **argv) {
     // calculate xstart and xstop is different, if count == 1 then only do xstart and xstop
     if (count == 1){
         answ = calcBessel(besselType, xstop, alpha, exponentScale);
-        printBesselData(2, answ, xstart, alpha, exponentScale);
+        printBesselData(2, answ, xstop, alpha, exponentScale);
         return 0;
     }
     //
